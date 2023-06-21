@@ -14,3 +14,4 @@ The original paper can be found at: https://arxiv.org/abs/2205.03688
 ## Image Correction
 
 ## Training
+[use of retinanet(?)]
