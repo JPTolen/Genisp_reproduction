@@ -9,6 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 import torchvision.models as models
 from Networks import ConvCC, ConvWB, ShallowConv
 import torch.optim as optim
+import torchvision.ops as ops
 
 
 
@@ -148,6 +149,7 @@ convcc_model = ConvCC()
 convcc_model.to(torch.double)
 shallowconv_model = ShallowConv()
 shallowconv_model.to(torch.double)
+retinanet.to(torch.double)
 
 # Get the parameters from each model
 convwb_params = list(convwb_model.parameters())
@@ -178,9 +180,10 @@ lr_schedule = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10], gamm
 convwb_model.train()
 convcc_model.train()
 shallowconv_model.train()
+retinanet.eval()
 
 dataset = CustomDataset(image_paths,image_annots)
-# print(dataset)
+print(dataset)
 
 dataloader = DataLoader(dataset, batch_size=2)
 
@@ -189,52 +192,52 @@ dataloader = DataLoader(dataset, batch_size=2)
 #     # # print(batch_annotations)
 #     print('training.............................................')
 
-epochs = 15
-batchs = 8
-epoch_number = 0
-batch_number = 0
+# epochs = 15
+# batchs = 8
+# epoch_number = 0
+# batch_number = 0
 
-# Training loop
-for i, epoch in enumerate(range(epochs)):
-    print('EPOCH {}:'.format(epoch_number + 1))
+# # Training loop
+# for i, epoch in enumerate(range(epochs)):
+#     print('EPOCH {}:'.format(epoch_number + 1))
 
-    # Move the mini-batch data and targets to CUDA
+#     # Move the mini-batch data and targets to CUDA
 
 
     
 
-    for batch_images in dataloader:    #batch in range(0, len(batch_images), batchs):
-        # print('BATCH {}:'.format(batch_number + 1))
-        # batch_images_cuda = batch_images.cuda()
-        # print(batch_images_cuda.shape)
-        #batch_targets_cuda = batch_targets.cuda()
-        # Zero the gradients
-        optimizer.zero_grad()
+#     for batch_images in dataloader:    #batch in range(0, len(batch_images), batchs):
+#         # print('BATCH {}:'.format(batch_number + 1))
+#         # batch_images_cuda = batch_images.cuda()
+#         # print(batch_images_cuda.shape)
+#         #batch_targets_cuda = batch_targets.cuda()
+#         # Zero the gradients
+#         optimizer.zero_grad()
 
-        # Forward pass
-        output = convwb_model(batch_images)
-        print('output na convwv: ', output.shape)
-        output = convcc_model(output)
-        output = shallowconv_model(output)
-        output = retinanet(output)
+#         # Forward pass
+#         output = convwb_model(batch_images)
+#         print('output na convwv: ', output.shape)
+#         output = convcc_model(output)
+#         output = shallowconv_model(output)
+#         output = retinanet(output)
 
-        ##!!!Delete later!!!##
-        # Print some stuff to check
-        print(output.size())
-        print(targets.size())
+#         ##!!!Delete later!!!##
+#         # Print some stuff to check
+#         print(output)
+#         # print(targets.size())
 
-        # Two losfunctions are used
-        # Regression loss = alpha balanced focal loss
-        # classification loss = smooth-L1 loss
-        L_reg = ops.focal_loss(output, targets, alpha=None, gamma=2.0, reduction='mean')
-        L_cls = nn.SmoothL1Loss(output, targets)
-        L_total = L_reg + L_cls
-        print(L_total)
+#         # Two losfunctions are used
+#         # Regression loss = alpha balanced focal loss
+#         # classification loss = smooth-L1 loss
+#         L_reg = ops.focal_loss(output, targets, alpha=None, gamma=2.0, reduction='mean')
+#         L_cls = nn.SmoothL1Loss(output, targets)
+#         L_total = L_reg + L_cls
+#         print(L_total)
 
-        # Backward pass
-        L_total.backward()
+#         # Backward pass
+#         L_total.backward()
 
-        # Update the model parameters
-        optimizer.step()
-        # Adjust learning rate based on the schedule
-        lr_schedule.step()
+#         # Update the model parameters
+#         optimizer.step()
+#         # Adjust learning rate based on the schedule
+#         lr_schedule.step()
