@@ -85,24 +85,30 @@ with open('raw_new_Sony_RX100m7_train.json') as f:
     data = json.load(f)    
 image_annotations = data['annotations']
 
+current_directory = os.getcwd()
+
+# Get the parent directory
+parent_directory = os.path.dirname(current_directory)
+path_to_images = os.path.join(parent_directory, 'Val_raw')
+
 
 ###### code for putting the image_paths in a list
 ###### and getting the corresponding annotations and putting
 ###### the annotations in a dictionary
 image_paths = []
 annots_list = []
-for filename in os.listdir('Val_raw'):
-    #print('filename',filename)
-    f = os.path.join('Val_raw', filename)
+for filename in os.listdir(path_to_images):
+    print('filename',filename)
+    f = os.path.join('..\\Val_raw', filename)
     # checking if it is a file
     image_paths.append(f)
     filename_short = ".".join(filename.split(".")[:-1])
-    #print('filename_short', filename_short)
+    print('filename_short', filename_short)
     for annot in image_annotations:
         if annot['image_id'] == filename_short:
             # print(annot['image_id'])
             annots_list.append(annot)
-# print(image_paths)
+print(image_paths)
 # print(image_annots)
 
 image_annots = {}
