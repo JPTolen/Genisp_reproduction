@@ -3,7 +3,7 @@
 Authors: 
 - Thijs Exterkate 
 - Tim Hoevenaar
-- Jesse Tholen
+- Jesse Tolen
 
 This reproduction was part of the course CS4240 Deep Learning at Delft University of Technology
 
