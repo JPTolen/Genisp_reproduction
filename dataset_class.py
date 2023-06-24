@@ -9,7 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 import torchvision.models as models
 from Networks import ConvCC, ConvWB, ShallowConv
 import torch.optim as optim
-import torchvision.ops as ops
+import torchvision.ops.focal_loss as focal_loss
 
 
 
@@ -64,9 +64,9 @@ def resize_800_1333(image):
     return resized_800_1333
 
 class CustomDataset(Dataset):
-    def __init__(self, image_paths, transform=None):
+    def __init__(self, image_paths, annotations, transform=None):
         self.image_paths = image_paths
-        # self.annotations = annotations
+        self.annotations = annotations
         # self.transform = transform
 
     def __len__(self):
@@ -74,7 +74,7 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, idx):
         image_path = self.image_paths[idx]
-        # annotation = self.annotations.get[idx, []]
+        annotation = self.annotations[idx]
 
         # Load the image and annotation
         image = preprocessing(image_path)
@@ -87,7 +87,7 @@ class CustomDataset(Dataset):
         # if self.transform:
         #     image = self.transform(image)
 
-        return image #, annotation
+        return image, annotation
 
 
 with open('raw_new_Sony_RX100m7_train.json') as f:
@@ -106,28 +106,67 @@ path_to_images = os.path.join(parent_directory, 'Val_raw')
 ###### the annotations in a dictionary
 image_paths = []
 annots_list = []
+image_names = []
 for filename in os.listdir(path_to_images):
     print('filename',filename)
     f = os.path.join('..\\Val_raw', filename)
     # checking if it is a file
     image_paths.append(f)
-    filename_short = ".".join(filename.split(".")[:-1])
-    print('filename_short', filename_short)
+    filename_short = ".".join(filename.split(".")[:-1])     
+    image_names.append(filename_short)
     for annot in image_annotations:
         if annot['image_id'] == filename_short:
             # print(annot['image_id'])
             annots_list.append(annot)
 print(image_paths)
+print(len(image_paths))
 # print(image_annots)
+print(image_names)
+print(len(image_names))
+
 
 image_annots = {}
+
 for item in annots_list:
     image_id = item['image_id']
     if image_id not in image_annots:
         image_annots[image_id] = []
+
     image_annots[image_id].append(item)
 
-print(image_annots)
+annots_per_image_list = []
+
+for name in image_names:
+    print(name)
+    if name not in image_annots:
+        print('nottt in images')
+        # targets['boxes'] = []
+        # targets['labels'] = []
+        annots_per_image_list.append({'boxes': [], 'labels': []})
+    else:
+        boxes_per_image = []
+        labels_per_image = []
+        for item in image_annots[name]:
+            print('itemmmmmmmmmm',item)
+            boxes_per_image.append(item['bbox'])
+            labels_per_image.append(item['category_id'])
+            print(boxes_per_image)
+            # targets['boxes'] = boxes_per_image
+            # targets['labels'] = labels_per_image
+
+        annots_per_image_list.append({'boxes': boxes_per_image, 'labels': labels_per_image})
+print(annots_per_image_list)
+targets = annots_per_image_list
+#print(targets)
+
+# for item in annots_per_image_list:
+#     print(item)
+
+
+
+
+# print(image_annots['DSC02087'])
+#print('annots_list[0]', annots_list)
 
 
 
@@ -182,62 +221,64 @@ convcc_model.train()
 shallowconv_model.train()
 retinanet.eval()
 
-dataset = CustomDataset(image_paths,image_annots)
-print(dataset)
+dataset = CustomDataset(image_paths,annots_per_image_list)
 
-dataloader = DataLoader(dataset, batch_size=2)
 
-# for batch_images in dataloader:
+dataloader = DataLoader(dataset, batch_size=1)
+
+# for batch_images, batch_annotations in dataloader:
 #     print(batch_images.shape)
-#     # # print(batch_annotations)
+#     print(batch_annotations)
 #     print('training.............................................')
 
-# epochs = 15
-# batchs = 8
-# epoch_number = 0
-# batch_number = 0
+epochs = 15
+batchs = 8
+epoch_number = 0
+batch_number = 0
 
-# # Training loop
-# for i, epoch in enumerate(range(epochs)):
-#     print('EPOCH {}:'.format(epoch_number + 1))
+# Training loop
+for i, epoch in enumerate(range(epochs)):
+    print('EPOCH {}:'.format(epoch_number + 1))
 
-#     # Move the mini-batch data and targets to CUDA
+    # Move the mini-batch data and targets to CUDA
 
 
     
 
-#     for batch_images in dataloader:    #batch in range(0, len(batch_images), batchs):
-#         # print('BATCH {}:'.format(batch_number + 1))
-#         # batch_images_cuda = batch_images.cuda()
-#         # print(batch_images_cuda.shape)
-#         #batch_targets_cuda = batch_targets.cuda()
-#         # Zero the gradients
-#         optimizer.zero_grad()
+    for batch_images, batch_annotations in dataloader:    #batch in range(0, len(batch_images), batchs):
+        # print('BATCH {}:'.format(batch_number + 1))
+        # batch_images_cuda = batch_images.cuda()
+        # print(batch_images_cuda.shape)
+        #batch_targets_cuda = batch_targets.cuda()
+        # Zero the gradients
+        optimizer.zero_grad()
 
-#         # Forward pass
-#         output = convwb_model(batch_images)
-#         print('output na convwv: ', output.shape)
-#         output = convcc_model(output)
-#         output = shallowconv_model(output)
-#         output = retinanet(output)
+        # Forward pass
+        # print(batch_images.shape)
+        # print(batch_annotations)
+        output = convwb_model(batch_images)
+        print('output na convwv: ', output.shape)
+        output = convcc_model(output)
+        output = shallowconv_model(output)
+        output = retinanet(output)
 
-#         ##!!!Delete later!!!##
-#         # Print some stuff to check
-#         print(output)
-#         # print(targets.size())
+        ##!!!Delete later!!!##
+        # Print some stuff to check
+        print(output)
+        print(targets)
 
-#         # Two losfunctions are used
-#         # Regression loss = alpha balanced focal loss
-#         # classification loss = smooth-L1 loss
-#         L_reg = ops.focal_loss(output, targets, alpha=None, gamma=2.0, reduction='mean')
-#         L_cls = nn.SmoothL1Loss(output, targets)
-#         L_total = L_reg + L_cls
-#         print(L_total)
+        # Two losfunctions are used
+        # Regression loss = alpha balanced focal loss
+        # classification loss = smooth-L1 loss
+        L_reg = focal_loss(output, targets, alpha=None, gamma=2.0, reduction='mean')
+        L_cls = nn.SmoothL1Loss(output, targets)
+        L_total = L_reg + L_cls
+        print(L_total)
 
-#         # Backward pass
-#         L_total.backward()
+        # Backward pass
+        L_total.backward()
 
-#         # Update the model parameters
-#         optimizer.step()
-#         # Adjust learning rate based on the schedule
-#         lr_schedule.step()
+        # Update the model parameters
+        optimizer.step()
+        # Adjust learning rate based on the schedule
+        lr_schedule.step()
