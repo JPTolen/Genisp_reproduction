@@ -54,6 +54,14 @@ def preprocessing(path):
 
     return xyz_image
 
+def resize_800_1333(image):
+    xyz_image = image  #, raw_data
+    #torch_array = torch.from_numpy(xyz_image).unsqueeze(0)
+    #xyz_image = xyz_image.permute(0, 3, 1, 2)
+    resized_800_1333 = F.interpolate(xyz_image, size=(256, 256), mode='bilinear')
+    #resized_800_1333 = resized_800_1333.permute(0,2,3,1)
+    return resized_800_1333
+
 class CustomDataset(Dataset):
     def __init__(self, image_paths, transform=None):
         self.image_paths = image_paths
@@ -68,7 +76,9 @@ class CustomDataset(Dataset):
         # annotation = self.annotations.get[idx, []]
 
         # Load the image and annotation
-        image = preprocessing(image_path).squeeze(0)
+        image = preprocessing(image_path)
+        image = resize_800_1333(image).squeeze(0)
+
         # with open(f'{annotation_path}') as f:
         #     data = json.load(f)
         # annotation = data
@@ -125,7 +135,7 @@ print(image_annots)
 # define the model
 # of the shelf retinanet with resnet50
 retinanet = models.detection.retinanet_resnet50_fpn_v2(weights='DEFAULT')
-retinanet = retinanet.cuda()
+#retinanet = retinanet.cuda()
 
 # Freeze the parameters of the backbone
 for param in retinanet.parameters():
@@ -157,13 +167,13 @@ lr_schedule = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10], gamm
 
 # See if GPU is available + move stuff
 # mini_batch moet nog naar cuda en de optimizers ook
-if torch.cuda.is_available():
-    print('naar cuda gezet')
-    convwb_model.cuda()
-    convcc_model.cuda()
-    shallowconv_model.cuda()
-else:
-    pass
+# if torch.cuda.is_available():
+#     print('naar cuda gezet')
+#     convwb_model.cuda()
+#     convcc_model.cuda()
+#     shallowconv_model.cuda()
+# else:
+#     pass
 
 convwb_model.train()
 convcc_model.train()
@@ -172,7 +182,7 @@ shallowconv_model.train()
 dataset = CustomDataset(image_paths,image_annots)
 # print(dataset)
 
-dataloader = DataLoader(dataset, batch_size=5)
+dataloader = DataLoader(dataset, batch_size=2)
 
 # for batch_images in dataloader:
 #     print(batch_images.shape)
@@ -195,14 +205,14 @@ for i, epoch in enumerate(range(epochs)):
 
     for batch_images in dataloader:    #batch in range(0, len(batch_images), batchs):
         # print('BATCH {}:'.format(batch_number + 1))
-        batch_images_cuda = batch_images.cuda()
-        print(batch_images_cuda.shape)
+        # batch_images_cuda = batch_images.cuda()
+        # print(batch_images_cuda.shape)
         #batch_targets_cuda = batch_targets.cuda()
         # Zero the gradients
         optimizer.zero_grad()
 
         # Forward pass
-        output = convwb_model(batch_images_cuda)
+        output = convwb_model(batch_images)
         print('output na convwv: ', output.shape)
         output = convcc_model(output)
         output = shallowconv_model(output)
