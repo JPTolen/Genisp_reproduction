@@ -10,6 +10,7 @@ import torchvision.models as models
 from Networks import ConvCC, ConvWB, ShallowConv
 import torch.optim as optim
 import torchvision.ops.focal_loss as focal_loss
+import torch.nn as nn
 
 
 
@@ -75,10 +76,36 @@ class CustomDataset(Dataset):
     def __getitem__(self, idx):
         image_path = self.image_paths[idx]
         annotation = self.annotations[idx]
+        
+
+        boxes = annotation['boxes']
+        labels = annotation['labels']
+
+        # Pad the annotations to a fixed number of boxes
+        max_boxes = 10  # Maximum number of boxes per image
+        num_boxes = len(boxes)
+
+        if num_boxes < max_boxes:
+            # Pad the boxes and labels
+            padded_boxes = boxes + [(0, 0, 0, 0)] * (max_boxes - num_boxes)
+            padded_labels = labels + [0] * (max_boxes - num_boxes)
+        else:
+            # Trim the boxes and labels to the maximum number
+            padded_boxes = boxes[:max_boxes]
+            padded_labels = labels[:max_boxes]
+
+        # Convert the padded boxes and labels to tensors
+        padded_boxes = torch.tensor(padded_boxes)
+        padded_labels = torch.tensor(padded_labels)
+
+        annotation = {'boxes': padded_boxes, 'labels': padded_labels}
+
+        #print('annotation of one image', annotation)
 
         # Load the image and annotation
         image = preprocessing(image_path)
         image = resize_800_1333(image).squeeze(0)
+        #print('image', image.shape)
 
         # with open(f'{annotation_path}') as f:
         #     data = json.load(f)
@@ -155,7 +182,7 @@ for name in image_names:
             # targets['labels'] = labels_per_image
 
         annots_per_image_list.append({'boxes': boxes_per_image, 'labels': labels_per_image})
-print(annots_per_image_list)
+print('annots_per_image_list', len(annots_per_image_list[0]))
 targets = annots_per_image_list
 #print(targets)
 
@@ -224,10 +251,10 @@ retinanet.eval()
 dataset = CustomDataset(image_paths,annots_per_image_list)
 
 
-dataloader = DataLoader(dataset, batch_size=1)
-
+dataloader = DataLoader(dataset, batch_size=3)
+print('DEBUGGGG')
 # for batch_images, batch_annotations in dataloader:
-#     print(batch_images.shape)
+#     print('batch_images', batch_images.shape)
 #     print(batch_annotations)
 #     print('training.............................................')
 
@@ -265,14 +292,14 @@ for i, epoch in enumerate(range(epochs)):
         ##!!!Delete later!!!##
         # Print some stuff to check
         print(output)
-        print(targets)
+        print(batch_annotations)
 
         # Two losfunctions are used
         # Regression loss = alpha balanced focal loss
         # classification loss = smooth-L1 loss
-        L_reg = focal_loss(output, targets, alpha=None, gamma=2.0, reduction='mean')
-        L_cls = nn.SmoothL1Loss(output, targets)
-        L_total = L_reg + L_cls
+        #L_reg = focal_loss(output, batch_annotations, alpha=None, gamma=2.0, reduction='mean')
+        L_cls = nn.SmoothL1Loss(output, batch_annotations)
+        L_total = L_cls #+ L_reg
         print(L_total)
 
         # Backward pass
