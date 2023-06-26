@@ -142,10 +142,18 @@ def sigmoid_focal_loss(
     Returns:
         Loss tensor with the reduction option applied.
     """
-    inputs = torch.tensor(inputs)
+    # inputs = torch.tensor(inputs)
+    print('INPUT BEFORE CLONING', inputs)
+    inputs = inputs.clone().detach().requires_grad_(True)
+    print('INPUT AFTER CLONING', inputs)
     inputs = inputs.float()
-    targets = torch.tensor(targets)
+    print('targets BEFORE CLONING', targets)
     targets = targets.float()
+    targets = targets.clone().detach().requires_grad_(True)
+    print('targets AFTER CLONING', targets)
+    # targets = targets.float()
+    # targets = torch.tensor(targets)
+    # targets = targets.float()
     p = torch.sigmoid(inputs)
     ce_loss = F.binary_cross_entropy_with_logits(inputs, targets, reduction="none")
     p_t = p * targets + (1 - p) * (1 - targets)
@@ -301,7 +309,7 @@ retinanet.eval()
 dataset = CustomDataset(image_paths,annots_per_image_list)
 
 
-dataloader = DataLoader(dataset, batch_size=3)
+dataloader = DataLoader(dataset, batch_size=1)
 print('DEBUGGGG')
 # for batch_images, batch_annotations in dataloader:
 #     print('batch_images', batch_images.shape)
@@ -341,15 +349,33 @@ for i, epoch in enumerate(range(epochs)):
 
         ##!!!Delete later!!!##
         # Print some stuff to check
-        print(output)
-        print(batch_annotations)
+        annot_length = batch_annotations['labels'].shape[1]
+        print('annot_length', annot_length)
+        output_sized = output[0] #.unsqueeze(0)
+        #print('output_sized',output_sized)
 
+        padded_boxes = torch.nn.functional.pad(output_sized['boxes'], pad=(0, 0, 0, annot_length - len(output_sized['boxes'])), mode='constant', value=0)
+        padded_scores = torch.nn.functional.pad(output_sized['scores'], pad=(0, annot_length - len(output_sized['scores'])), mode='constant', value=0)
+        padded_labels = torch.nn.functional.pad(output_sized['labels'], pad=(0, annot_length - len(output_sized['labels'])), mode='constant', value=0)
+        padded_output = {'boxes': padded_boxes, 'scores': padded_scores, 'labels': padded_labels}
+
+        print('padded_output', padded_output)
+
+        y = []
+        for i in padded_labels:
+            
+
+
+
+        print(batch_annotations['labels'].shape)
+        print(padded_scores.unsqueeze(0).shape)
         # Two losfunctions are used
         # Regression loss = alpha balanced focal loss
         # classification loss = smooth-L1 loss
-        #L_reg = focal_loss(output, batch_annotations, alpha=None, gamma=2.0, reduction='mean')
+        L_reg = sigmoid_focal_loss(padded_scores.unsqueeze(0), batch_annotations['labels'], reduction='mean')
+        print('L_reg', L_reg)
         L_cls = nn.SmoothL1Loss(output, batch_annotations)
-        L_total = L_cls #+ L_reg
+        L_total = L_cls + L_reg
         print(L_total)
 
         # Backward pass
