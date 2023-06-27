@@ -56,6 +56,21 @@ def preprocessing(path):
 
     return xyz_image
 
+def scale_bbox(bbox, original_size, target_size):
+    # Calculate scaling factors for width and height
+    width_scale = target_size[1] / original_size[1]
+    height_scale = target_size[0] / original_size[0]
+
+    # Scale the bounding box coordinates
+    scaled_bbox = torch.FloatTensor([
+        bbox[0] * width_scale,                     # x_min
+        bbox[1] * height_scale,                    # y_min
+        (bbox[0] + bbox[2]) * width_scale,         # x_max
+        (bbox[1] + bbox[3]) * height_scale         # y_max
+    ])
+
+    return scaled_bbox
+
 def resize_800_1333(image):
     xyz_image = image  #, raw_data
     #torch_array = torch.from_numpy(xyz_image).unsqueeze(0)
@@ -68,6 +83,13 @@ class CustomDataset(Dataset):
     def __init__(self, image_paths, annotations, transform=None):
         self.image_paths = image_paths
         self.annotations = annotations
+        max_boxes = 0
+        for item in annots_per_image_list:
+            boxes_count = len(item['boxes'])
+            if boxes_count > max_boxes:
+                max_boxes = boxes_count
+        self.max_boxes = max_boxes
+        #print('max_boxes', max_boxes)
         # self.transform = transform
 
     def __len__(self):
@@ -76,13 +98,25 @@ class CustomDataset(Dataset):
     def __getitem__(self, idx):
         image_path = self.image_paths[idx]
         annotation = self.annotations[idx]
+
+        boxes_scaled = []
+        boxes = annotation['boxes']
+        #print('boxes_get_item', boxes)
+        for box in boxes:
+            box = scale_bbox(box, original_size=(5496, 3672), target_size=(256, 256))
+            boxes_scaled.append(box)
+        boxes = boxes_scaled
+        # boxes_lists = [[int(round(coord)) for coord in box.tolist()] for box in boxes]
+        boxes_lists = [[coord for coord in box.tolist()] for box in boxes]
+        boxes = boxes_lists
+        #print('boxes', boxes)
         
 
-        boxes = annotation['boxes']
+        # boxes = annotation['boxes']
         labels = annotation['labels']
 
         # Pad the annotations to a fixed number of boxes
-        max_boxes = 10  # Maximum number of boxes per image
+        max_boxes = self.max_boxes  # Maximum number of boxes per image
         num_boxes = len(boxes)
 
         if num_boxes < max_boxes:
@@ -143,14 +177,14 @@ def sigmoid_focal_loss(
         Loss tensor with the reduction option applied.
     """
     # inputs = torch.tensor(inputs)
-    print('INPUT BEFORE CLONING', inputs)
+    #print('INPUT BEFORE CLONING', inputs)
     inputs = inputs.clone().detach().requires_grad_(True)
-    print('INPUT AFTER CLONING', inputs)
+    #print('INPUT AFTER CLONING', inputs)
     inputs = inputs.float()
-    print('targets BEFORE CLONING', targets)
+    #print('targets BEFORE CLONING', targets)
     targets = targets.float()
     targets = targets.clone().detach().requires_grad_(True)
-    print('targets AFTER CLONING', targets)
+    #print('targets AFTER CLONING', targets)
     # targets = targets.float()
     # targets = torch.tensor(targets)
     # targets = targets.float()
@@ -244,18 +278,13 @@ print('annots_per_image_list', len(annots_per_image_list[0]))
 targets = annots_per_image_list
 #print(targets)
 
-# for item in annots_per_image_list:
-#     print(item)
 
 
 
-
-# print(image_annots['DSC02087'])
-#print('annots_list[0]', annots_list)
-
-
-
-
+#############################################
+## choose between 'train' or 'test' #########
+#############################################
+network_mode = 'train'
 
 # define the model
 # of the shelf retinanet with resnet50
@@ -301,87 +330,184 @@ lr_schedule = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10], gamm
 # else:
 #     pass
 
-convwb_model.train()
-convcc_model.train()
-shallowconv_model.train()
+if network_mode == 'train':
+    convwb_model.train()
+    convcc_model.train()
+    shallowconv_model.train()
+elif network_mode == 'test':
+    convwb_model.eval()
+    convcc_model.eval()
+    shallowconv_model.eval()
+
+    ### load model parameters for test mode
+    convwb_model.load_state_dict(torch.load('convwb_model.pth'))
+    convcc_model.load_state_dict(torch.load('convcc_model.pth'))
+    shallowconv_model.load_state_dict(torch.load('shallowconv_model.pth'))
 retinanet.eval()
 
-dataset = CustomDataset(image_paths,annots_per_image_list)
+
+max_boxes = 0
+for item in annots_per_image_list:
+    boxes_count = len(item['boxes'])
+    if boxes_count > max_boxes:
+        max_boxes = boxes_count
+print('max_boxes', max_boxes)
+
+dataset = CustomDataset(image_paths,annots_per_image_list, max_boxes)
 
 
-dataloader = DataLoader(dataset, batch_size=1)
-print('DEBUGGGG')
+epochs = 3
+batch_size = 3
+dataloader = DataLoader(dataset, batch_size)
+
+### debugging dataloaders
 # for batch_images, batch_annotations in dataloader:
 #     print('batch_images', batch_images.shape)
 #     print(batch_annotations)
 #     print('training.............................................')
 
-epochs = 15
+
 batchs = 8
 epoch_number = 0
 batch_number = 0
 
-# Training loop
+regression_loss = []
+classification_loss = []
+#Training loop
 for i, epoch in enumerate(range(epochs)):
     print('EPOCH {}:'.format(epoch_number + 1))
+    print(i)
 
     # Move the mini-batch data and targets to CUDA
 
-
-    
-
     for batch_images, batch_annotations in dataloader:    #batch in range(0, len(batch_images), batchs):
-        # print('BATCH {}:'.format(batch_number + 1))
+        print('BATCH {}:'.format(batch_number + 1))
+        print(len(batch_images))
+
         # batch_images_cuda = batch_images.cuda()
         # print(batch_images_cuda.shape)
         #batch_targets_cuda = batch_targets.cuda()
         # Zero the gradients
         optimizer.zero_grad()
 
+
+        # batch_ann_temp_boxes = batch_annotations['boxes'][0]
+        # del batch_annotations['boxes']
+        # batch_annotations['boxes'] = batch_ann_temp_boxes
+
         # Forward pass
-        # print(batch_images.shape)
-        # print(batch_annotations)
+        #print(batch_images.shape)
+        #print(batch_annotations)
         output = convwb_model(batch_images)
-        print('output na convwv: ', output.shape)
+        #print('output na convwv: ', output.shape)
         output = convcc_model(output)
         output = shallowconv_model(output)
         output = retinanet(output)
 
         ##!!!Delete later!!!##
         # Print some stuff to check
+        #print('OUTPUT', output)
+        #print('batch_annotations', batch_annotations)
         annot_length = batch_annotations['labels'].shape[1]
-        print('annot_length', annot_length)
-        output_sized = output[0] #.unsqueeze(0)
-        #print('output_sized',output_sized)
+        #print('annot_length', annot_length)
+        padded_outputs = []
+        tensor1 = torch.zeros((1,annot_length))
+        tensor2 = torch.zeros((1,annot_length))
+        tensor3 = torch.zeros((1,annot_length,4))
+        for i in range(len(batch_images)):
+            #print('-------------------------------------', i)
+            output_sized = output[i] #.unsqueeze(0)
+            #print('output_sized',output_sized)
 
-        padded_boxes = torch.nn.functional.pad(output_sized['boxes'], pad=(0, 0, 0, annot_length - len(output_sized['boxes'])), mode='constant', value=0)
-        padded_scores = torch.nn.functional.pad(output_sized['scores'], pad=(0, annot_length - len(output_sized['scores'])), mode='constant', value=0)
-        padded_labels = torch.nn.functional.pad(output_sized['labels'], pad=(0, annot_length - len(output_sized['labels'])), mode='constant', value=0)
-        padded_output = {'boxes': padded_boxes, 'scores': padded_scores, 'labels': padded_labels}
+            padded_boxes = torch.nn.functional.pad(output_sized['boxes'], pad=(0, 0, 0, annot_length - len(output_sized['boxes'])), mode='constant', value=0)
+            padded_scores = torch.nn.functional.pad(output_sized['scores'], pad=(0, annot_length - len(output_sized['scores'])), mode='constant', value=0)
+            padded_labels = torch.nn.functional.pad(output_sized['labels'], pad=(0, annot_length - len(output_sized['labels'])), mode='constant', value=0)
+            padded_output = {'boxes': padded_boxes, 'scores': padded_scores, 'labels': padded_labels}
 
-        print('padded_output', padded_output)
+            #print('padded_output', padded_output)
+            padded_outputs.append(padded_output)
 
-        y = []
-        for i in padded_labels:
+            annot_labels = batch_annotations['labels'][i,:]
+            #annot_boxes = batch_annotations['boxes']
+            #print('annot_boxes', annot_boxes.shape)
+            #annot_box_i = annot_boxes[i,:,:]
+            #print('annot_box_i', annot_box_i)
+            #print(padded_labels)
+
+            batch_annotations_y = torch.eq(annot_labels, padded_labels).int().unsqueeze(0)
+            #print(batch_annotations_y.shape)
+            #print(tensor1.shape)
+            #print(tensor1)
+            tensor1 = torch.cat((tensor1, batch_annotations_y), dim=0)
+            #print('tensor1', tensor1)
+
             
+            tensor2 = torch.cat((tensor2, padded_scores.unsqueeze(0)), dim=0)
+            #print('tensor2', tensor2)
 
+            padded_boxes = padded_boxes.unsqueeze(0)
+            #print('padded_boxes', padded_boxes.shape)
+            
+            annot_boxes = batch_annotations['boxes'][i,:,:]
+            #print(annot_boxes.shape)
+            
+            # L_cls = nn.SmoothL1Loss()
+            # loss = L_cls(padded_boxes, annot_boxes)
+            # print('loss', loss)
+            # print('L_cls',L_cls)
+            #print(tensor3.shape)
+            tensor3 = torch.cat((tensor3, padded_boxes), dim=0)
 
+        #print(tensor3.shape)
+        #rint
+        #print('tensor3', tensor3)
+        output_boxes = tensor3[1:,:,:]
+        #print('output_boxes', output_boxes.shape)
+        annot_boxes = batch_annotations['boxes']
+        #print('annot_boxes', annot_boxes.shape)
+       
+        batch_scores = tensor2[1:]
+        #print(batch_scores)
+        batch_annotations_y = tensor1[1:]
+        #print(batch_annotations_y)
+        #print('padded_outputs', padded_outputs)
+        
 
-        print(batch_annotations['labels'].shape)
-        print(padded_scores.unsqueeze(0).shape)
+        #print(batch_annotations['labels'])
+        #print(padded_scores.unsqueeze(0).shape)
+        #print(padded_labels.unsqueeze(0))
         # Two losfunctions are used
         # Regression loss = alpha balanced focal loss
         # classification loss = smooth-L1 loss
-        L_reg = sigmoid_focal_loss(padded_scores.unsqueeze(0), batch_annotations['labels'], reduction='mean')
-        print('L_reg', L_reg)
-        L_cls = nn.SmoothL1Loss(output, batch_annotations)
-        L_total = L_cls + L_reg
-        print(L_total)
+        #print(batch_scores.shape)
+        #print(batch_annotations_y.shape)
 
-        # Backward pass
+        L_cls = sigmoid_focal_loss(batch_scores, batch_annotations_y, reduction='mean')
+        #L_reg = sigmoid_focal_loss(padded_scores.unsqueeze(0), batch_annotations_y, reduction='mean')
+        #print('L_reg', L_reg)
+        regression_loss.append(L_cls.item())
+
+
+        smoothl1loss = nn.SmoothL1Loss()
+        L_reg = smoothl1loss(output_boxes, annot_boxes)
+        #print('loss', loss)
+        classification_loss.append(L_reg.item())
+        #L_cls = nn.SmoothL1Loss(output_boxes, annot_boxes)
+        L_total = L_reg + L_cls
+        #print('L_total', L_total)
+        print('regression_loss', regression_loss)
+        print('classification_loss', classification_loss)
+
+        #Backward pass
         L_total.backward()
 
-        # Update the model parameters
+        #Update the model parameters
         optimizer.step()
-        # Adjust learning rate based on the schedule
+        #Adjust learning rate based on the schedule
         lr_schedule.step()
+
+if network_mode == 'train':
+    # Save the parameters of the models
+    torch.save(convwb_model.state_dict(), 'convwb_model.pth')
+    torch.save(convcc_model.state_dict(), 'convcc_model.pth')
+    torch.save(shallowconv_model.state_dict(), 'shallowconv_model.pth')

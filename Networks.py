@@ -62,7 +62,8 @@ class ConvWB(nn.Module):
 
 
         print('WB MATRIX VALUES ARE:', output[0])
-
+        
+        ### Multiply the input_image with the output to obtain a white_balance enhanced_image
         enhanced_image = input_image.clone()
         for i in range(len(input_image)):
           enhanced_image[i, 0, :, :] = input_image[i, 0, :, :] * output[i, 0]
@@ -127,7 +128,7 @@ class ConvCC(nn.Module):
 
         print('CC MATRIX VALUES ARE:', output[0])
 
-
+        ### Multiply the input_image with the output to obtain a color corrected enhanced_image
         enhanced_image = input_image.clone()
         for i in range(len(input_image)):
           enhanced_image[i,0,:,:] = input_image[i,0,:,:]*output[i,0] + input_image[i,1,:,:]*output[i,1] + input_image[i,2,:,:]*output[i,2]
