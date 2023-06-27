@@ -109,10 +109,7 @@ class CustomDataset(Dataset):
         # boxes_lists = [[int(round(coord)) for coord in box.tolist()] for box in boxes]
         boxes_lists = [[coord for coord in box.tolist()] for box in boxes]
         boxes = boxes_lists
-        #print('boxes', boxes)
-        
 
-        # boxes = annotation['boxes']
         labels = annotation['labels']
 
         # Pad the annotations to a fixed number of boxes
@@ -134,19 +131,10 @@ class CustomDataset(Dataset):
 
         annotation = {'boxes': padded_boxes, 'labels': padded_labels}
 
-        #print('annotation of one image', annotation)
-
-        # Load the image and annotation
+        # Load the image
         image = preprocessing(image_path)
         image = resize_800_1333(image).squeeze(0)
-        #print('image', image.shape)
 
-        # with open(f'{annotation_path}') as f:
-        #     data = json.load(f)
-        # annotation = data
-
-        # if self.transform:
-        #     image = self.transform(image)
 
         return image, annotation
     
@@ -235,26 +223,28 @@ for filename in os.listdir(path_to_images):
         if annot['image_id'] == filename_short:
             # print(annot['image_id'])
             annots_list.append(annot)
-print(image_paths)
-print(len(image_paths))
-# print(image_annots)
-print(image_names)
-print(len(image_names))
+# print(image_paths)
+# print(len(image_paths))
+# # print(image_annots)
+# print(image_names)
+# print(len(image_names))
 
 
+
+### Constructing an list with annotations per image
+### shape:
+### [  {'boxes': ... , 'labels': ...},
+###    { ... } ,
+###    {'boxes': ... , 'labels': ...}  ]
 image_annots = {}
 
 for item in annots_list:
     image_id = item['image_id']
     if image_id not in image_annots:
         image_annots[image_id] = []
-
     image_annots[image_id].append(item)
-
 annots_per_image_list = []
-
 for name in image_names:
-    
     if name not in image_annots:
         print('nottt in images')
         # targets['boxes'] = []
@@ -268,10 +258,9 @@ for name in image_names:
             labels_per_image.append(item['category_id'])
             # targets['boxes'] = boxes_per_image
             # targets['labels'] = labels_per_image
-
         annots_per_image_list.append({'boxes': boxes_per_image, 'labels': labels_per_image})
-print('annots_per_image_list', len(annots_per_image_list[0]))
-targets = annots_per_image_list
+print('annots_per_image_list', annots_per_image_list)
+# targets = annots_per_image_list
 #print(targets)
 
 
@@ -282,7 +271,7 @@ targets = annots_per_image_list
 #############################################
 network_mode = 'train'
 
-# define the model
+# define the detector
 # of the shelf retinanet with resnet50
 retinanet = models.detection.retinanet_resnet50_fpn_v2(weights='DEFAULT')
 #retinanet = retinanet.cuda()
@@ -291,7 +280,7 @@ retinanet = models.detection.retinanet_resnet50_fpn_v2(weights='DEFAULT')
 for param in retinanet.parameters():
     param.requires_grad = False
 
-# our own model
+# Initialize the conv nets
 convwb_model = ConvWB()
 convwb_model.to(torch.double)
 convcc_model = ConvCC()
@@ -342,7 +331,8 @@ elif network_mode == 'test':
     shallowconv_model.load_state_dict(torch.load('shallowconv_model.pth'))
 retinanet.eval()
 
-
+### Determine the maximum amount of boxes in one 
+### image for padding 
 max_boxes = 0
 for item in annots_per_image_list:
     boxes_count = len(item['boxes'])
@@ -399,10 +389,7 @@ for i, epoch in enumerate(range(epochs)):
         output = retinanet(output)
         
 
-        ##!!!Delete later!!!##
-        # Print some stuff to check
-        #print('OUTPUT', output)
-        #print('batch_annotations', batch_annotations)
+
         annot_length = batch_annotations['labels'].shape[1]
         #print('annot_length', annot_length)
         padded_outputs = []
