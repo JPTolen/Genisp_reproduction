@@ -207,8 +207,6 @@ def sigmoid_focal_loss(
 
     return loss
 
-
-
 with open('raw_new_Sony_RX100m7_train.json') as f:
     data = json.load(f)    
 image_annotations = data['annotations']
@@ -256,7 +254,7 @@ for item in annots_list:
 annots_per_image_list = []
 
 for name in image_names:
-    print(name)
+    
     if name not in image_annots:
         print('nottt in images')
         # targets['boxes'] = []
@@ -266,10 +264,8 @@ for name in image_names:
         boxes_per_image = []
         labels_per_image = []
         for item in image_annots[name]:
-            print('itemmmmmmmmmm',item)
             boxes_per_image.append(item['bbox'])
             labels_per_image.append(item['category_id'])
-            print(boxes_per_image)
             # targets['boxes'] = boxes_per_image
             # targets['labels'] = labels_per_image
 
@@ -319,6 +315,7 @@ optimizer = optim.Adam(all_params, lr=0.01)
 # Learning rate schedule
 # learning_rate = [0.01, 0.001, 0.0001] at 5th and 10th epoch change
 lr_schedule = optim.lr_scheduler.MultiStepLR(optimizer, milestones=[5, 10], gamma=0.1)
+
 
 # See if GPU is available + move stuff
 # mini_batch moet nog naar cuda en de optimizers ook
@@ -375,34 +372,32 @@ regression_loss = []
 classification_loss = []
 #Training loop
 for i, epoch in enumerate(range(epochs)):
-    print('EPOCH {}:'.format(epoch_number + 1))
-    print(i)
+    
+    print('EPOCH', i+1)
 
-    # Move the mini-batch data and targets to CUDA
+    
 
-    for batch_images, batch_annotations in dataloader:    #batch in range(0, len(batch_images), batchs):
-        print('BATCH {}:'.format(batch_number + 1))
-        print(len(batch_images))
+    for batch_images, batch_annotations in dataloader:
 
-        # batch_images_cuda = batch_images.cuda()
         # print(batch_images_cuda.shape)
         #batch_targets_cuda = batch_targets.cuda()
         # Zero the gradients
         optimizer.zero_grad()
 
 
-        # batch_ann_temp_boxes = batch_annotations['boxes'][0]
-        # del batch_annotations['boxes']
-        # batch_annotations['boxes'] = batch_ann_temp_boxes
-
         # Forward pass
-        #print(batch_images.shape)
+        print(batch_images.shape)
+        if network_mode == 'train':
+            batch_images.requires_grad = True
+        elif network_mode == 'test':
+            batch_images.requires_grad = False
         #print(batch_annotations)
+        
         output = convwb_model(batch_images)
-        #print('output na convwv: ', output.shape)
         output = convcc_model(output)
         output = shallowconv_model(output)
         output = retinanet(output)
+        
 
         ##!!!Delete later!!!##
         # Print some stuff to check
