@@ -7,8 +7,8 @@ Authors:
 
 This reproduction was part of the course CS4240 Deep Learning at Delft University of Technology
 
-The original paper can be found at: https://arxiv.org/abs/2205.03688
-The github page containing the code: https://github.com/JPTolen/Genisp_reproduction
+The original paper can be found at: https://arxiv.org/abs/2205.03688.
+The github page containing the code: https://github.com/JPTolen/Genisp_reproduction.
 
 ## Introduction
 
