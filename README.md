@@ -65,9 +65,23 @@ To guide our model during training we used an off-the-shelf object detector call
 
 We use the off-the-shelf detector to make the object detections on the output of our model so we have an output which we can compare to the ground truth. The ground truth is obtained from the dataset described earlier. The parameters of retinanet are frozen during training. The loss is then calculated using two different functions. The first is the classification loss calculated by the α-balanced focal loss as shown below. Where y ∈ {±1} specifies the ground-truth class and p ∈ [0, 1] is the model’s estimated probability for the class with label y = 1. For this loss we were able to use a premade pytorch model.
 
+<p align="center">
+  <img src="focalloss.png" alt="alt text" width="288" height="95.2">
+</p>
+
 The second is regression loss calculated by the smooth-L1 loss. Where β is a predefined threshold, x is the prediction of the model and y is the ground-truth. We were able to use a standard pytorch module for this.
 
+<p align="center">
+  <img src="smooothl1loss.png" alt="alt text" width="388.4" height="90">
+</p>
+
 These two methods are then added to get the complete loss.
+
+<p align="center">
+  <img src="loss.png" alt="alt text" width="174.8" height="31.6">
+</p>
+
+
 To optimize our model we used the Adam optimizer as is described in the paper. We train for 15 epochs with batch sizes of 8. The learning rate starts at `1e-2` and at epoch 5 and 10 we change the learning rate to `1e-3` and `1e-4` respectively. We use the sony images from the dataset for training.
 
 ## Results and Analysis
