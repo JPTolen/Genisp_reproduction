@@ -48,7 +48,18 @@ The three neural networks we created are all implemented in a different class wh
 
 The implementation of this is straightforward and can be found in “Networks.py” on our github page.
 
-## Image Correction
+## Dataloading
+The correctly loading of the data made available by the authors was the hardest part of this reproduction, because it involves all the parts of the pipeline working together and having the right inputs and outputs for every connection. To get all the data ready for the color processing and the detection network we implemented our own dataset class available as CustomDataset on github. This class takes in the location of the images for training, testing or validation and the corresponding annotations and fetches the labels and bounding boxes and returns the right annotations with the images present in the folder for further usage. Because the images were resized for data reduction this is also directly done with our own function “resize_800_1333” along with the preprocessing for every image. The bounding boxes then need to be scaled as well to fit the new size and this is done with our own function “scale_bbox”. The new size of the images is 256*256 for training as mentioned in the paper. 
+
+The truly hard part of this implementation was that the used loss functions do not allow for a discrepancy between the number of ground truth annotations and the detections of the retinanet we used. In general the detection network produced a higher amount of detections then there were ground truth annotations. To overcome this we used two functions “process_gt_annotations” and “process_resnet_output” which make sure that both the ground truth and the annotations have the same length and format. As every image should have its own annotations and both loss functions require a different part of the annotations as well as retinanet outputting in a different format, this resulted in quite large and not easily comprehensible functions that perform data structure manipulations. For further inspections of precise manipulations we refer to our github page “https://github.com/JPTolen/Genisp_reproduction”.
+
 
 ## Training
-[use of retinanet(?)]
+To guide our model during training we used an off-the-shelf object detector called retinanet with a resnet50 backbone. This detector is available as a model with pre-trained weights from the torchvision library using the line.
+
+<p align="center">
+  <code>retinanet = models.detection.retinanet_resnet50_fpn_v2(weights='DEFAULT')</code>
+</p>
+
+
+We use the off-the-shelf detector to make the object detections on the output of our model so we have an output which we can compare to the ground truth. The ground truth is obtained from the dataset described earlier. The parameters of retinanet are frozen during training. The loss is then calculated using two different functions. The first is the classification loss calculated by the α-balanced focal loss[reference] as shown below. Where y ∈ {±1} specifies the ground-truth class and p ∈ [0, 1] is the model’s estimated probability for the class with label y = 1. For this loss we were able to use a premade pytorch model[reference].
