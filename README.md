@@ -94,5 +94,7 @@ We have to mention the fault is not fully in the paper. We acknowledge that pote
 
 ## References
 [1] https://en.wikipedia.org/wiki/Bayer_filter
+
 [2] https://openaccess.thecvf.com/content_ICCV_2017/papers/Lin_Focal_Loss_for_ICCV_2017_paper.pdf
+
 [3] https://pytorch.org/vision/main/_modules/torchvision/ops/focal_loss.html
