@@ -1,0 +1,35 @@
+name: Generate PDF
+
+on:
+  push:
+    branches:
+      - main  # Update with your default branch
+  pull_request:
+    branches:
+      - main  # Update with your default branch
+
+jobs:
+  generate-pdf:
+    name: Generate PDF
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14
+
+      - name: Install dependencies
+        run: npm install --global markdown-pdf  # or any other Markdown to PDF converter you prefer
+
+      - name: Generate PDF
+        run: markdown-pdf README.md -o README.pdf  # Update with the filename and location of your README
+
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: readme-pdf
+          path: README.pdf  # Update with the filename and location of your PDF
