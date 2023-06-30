@@ -24,9 +24,8 @@ Since the authors propose a low-light image processing method that is device ind
 As there was no real application of this process shown in the paper we had to reproduce the preprocessing with just the terms and order of application. Starting the color extraction and green channel averaging we found out through the internet that information in raw camera files is represented in a device specific pattern. Since the specific camera sensors used for the raw data provided by the authors was also mentioned in the paper we found out that the raw images follow a Bayer pattern(RGGB). In the preprocessing function available in the python file “dataset_class.py” on our github this information is incorporated by extracting raw data in this pattern after which the green channels are averaged. 
 
 <p align="center">
-  <img src="1024px-Bayer_pattern_on_sensor.svg.png" alt="alt text" width="655.5" height="368.5">
+  <img src="1024px-Bayer_pattern_on_sensor.svg.png" alt="alt text" width="524.4" height="294.8">
 </p>
-
  
 After restacking the restacked colors are matrix multiplied with a CST matrix available inside the raw data to get a (CIE XYZ) device independent color space. Since the output of this whole preprocessing had values in the hundreds, the preprocessed images were not displayable by any package in python and also not desirable as all the pixels were interpreted as white or black and therefore not ready for further manipulation. To resolve this the images are normalized by subtracting black levels of the raw data and dividing the outcome by the difference between the white and black levels. This is a common practice in image processing, but was not mentioned in the paper and therefore made the reproduction a little bit harder. 
 
@@ -34,17 +33,17 @@ After restacking the restacked colors are matrix multiplied with a CST matrix av
 After the image is preprocessed the next step in the GenISP pipeline is the neural color processing which consists of white balancing and color correction. Reproducing this part was relatively easy as it only consists of implementing the in the paper shown neural network and applying the given matrices to the images.
 
 <p align="center">
-  <img src="whole_pipeling.PNG" alt="alt text" width="796" height="317.5">
+  <img src="whole_pipeling.PNG" alt="alt text" width="637.6" height="254">
 </p>
 
 The three neural networks we created are all implemented in a different class where the layers are initialized using pytorch neural network modules and furthermore contain a forward pass. After the forward pass of the ConvWB and ConvCC networks the original image is matrix multiplied with the output of the model. 
 
 
 <p align="center">
-  <img src="white_balance.PNG" alt="alt text" width="581.5" height="159.5">
+  <img src="white_balance.PNG" alt="alt text" width="465" height="127.6">
 </p>
 <p align="center">
-  <img src="color_correction.PNG" alt="alt text" width="580.5" height="171.5">
+  <img src="color_correction.PNG" alt="alt text" width="464.4" height="137.2">
 </p>
 
 The implementation of this is straightforward and can be found in “Networks.py” on our github page.
