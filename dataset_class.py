@@ -29,10 +29,6 @@ def preprocessing(path):
     black = np.tile(black, (raw_data.shape[0]//2, raw_data.shape[1]//2))
     raw_data = (raw_data - black) / (raw.white_level - black)
 
-    # Get the color channel pattern
-    n = raw.num_colors
-    color_pattern = raw.raw_pattern
-
     red_channel = raw_data[::2, ::2]  # Extract the red channel (channel 0)
     green1_channel = raw_data[::2, 1::2]  # Extract the first green channel (channel 1)
     green2_channel = raw_data[1::2, ::2]  # Extract the second green channel (channel 2)
