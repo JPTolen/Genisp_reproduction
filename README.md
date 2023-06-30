@@ -2,8 +2,8 @@
 
 Authors: 
 - Thijs Exterkate 
-- Tim Hoevenaar
-- Jesse Tolen
+- Tim Hoevenaar 5425042
+- Jesse Tolen 4389816
 
 This reproduction was part of the course CS4240 Deep Learning at Delft University of Technology
 
@@ -70,5 +70,5 @@ To optimize our model we used the Adam optimizer as is described in the paper. W
 
 ## References
 [1] https://en.wikipedia.org/wiki/Bayer_filter
-[2]https://openaccess.thecvf.com/content_ICCV_2017/papers/Lin_Focal_Loss_for_ICCV_2017_paper.pdf
-[3]https://pytorch.org/vision/main/_modules/torchvision/ops/focal_loss.html
+[2] https://openaccess.thecvf.com/content_ICCV_2017/papers/Lin_Focal_Loss_for_ICCV_2017_paper.pdf
+[3] https://pytorch.org/vision/main/_modules/torchvision/ops/focal_loss.html
