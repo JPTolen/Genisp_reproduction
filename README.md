@@ -61,9 +61,14 @@ To guide our model during training we used an off-the-shelf object detector call
   <code>retinanet = models.detection.retinanet_resnet50_fpn_v2(weights='DEFAULT')</code>
 </p>
 
-We use the off-the-shelf detector to make the object detections on the output of our model so we have an output which we can compare to the ground truth. The ground truth is obtained from the dataset described earlier. The parameters of retinanet are frozen during training. The loss is then calculated using two different functions. The first is the classification loss calculated by the α-balanced focal loss as shown below. Where `y ∈ {±1}` specifies the ground-truth class and `p ∈ [0, 1]` is the model’s estimated probability for the class with label `y = 1`. For this loss we were able to use a premade pytorch model.
+We use the off-the-shelf detector to make the object detections on the output of our model so we have an output which we can compare to the ground truth. The ground truth is obtained from the dataset described earlier. The parameters of retinanet are frozen during training. The loss is then calculated using two different functions. The first is the classification loss calculated by the α-balanced focal loss as shown below. Where y ∈ {±1} specifies the ground-truth class and p ∈ [0, 1] is the model’s estimated probability for the class with label y = 1. For this loss we were able to use a premade pytorch model.
 
 The second is regression loss calculated by the smooth-L1 loss. Where β is a predefined threshold, x is the prediction of the model and y is the ground-truth. We were able to use a standard pytorch module for this.
 
 These two methods are then added to get the complete loss.
 To optimize our model we used the Adam optimizer as is described in the paper. We train for 15 epochs with batch sizes of 8. The learning rate starts at `1e-2` and at epoch 5 and 10 we change the learning rate to `1e-3` and `1e-4` respectively. We use the sony images from the dataset for training.
+
+## References
+[1] https://en.wikipedia.org/wiki/Bayer_filter
+[2]https://openaccess.thecvf.com/content_ICCV_2017/papers/Lin_Focal_Loss_for_ICCV_2017_paper.pdf
+[3]https://pytorch.org/vision/main/_modules/torchvision/ops/focal_loss.html
